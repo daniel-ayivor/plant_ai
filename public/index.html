@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlantAI - Disease Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #4CAF50;
+        }
+
+        .upload-area {
+            text-align: center;
+            padding: 40px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #4CAF50;
+            background: #f0f8f0;
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background: #e8f5e8;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #45a049;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .result-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+
+        .healthy { color: #4CAF50; }
+        .diseased { color: #f44336; }
+        .suspicious { color: #ff9800; }
+
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            transition: width 0.3s ease;
+        }
+
+        .disease-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .disease-info h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .disease-info p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .api-status {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online { background: #4CAF50; }
+        .status-offline { background: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 PlantAI</h1>
+            <p>AI-Powered Plant Disease Detection</p>
+        </div>
+
+        <div class="main-content">
+            <div class="api-status" id="apiStatus">
+                <span class="status-indicator status-offline" id="statusIndicator"></span>
+                <span id="statusText">Checking API status...</span>
+            </div>
+
+            <div class="upload-section">
+                <h2>Upload Plant Image</h2>
+                <p>Upload a clear image of your plant's leaves or affected area for disease detection.</p>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📸</div>
+                    <div class="upload-text">Click to upload or drag and drop</div>
+                    <div class="upload-hint">Supports JPG, PNG, GIF (max 10MB)</div>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                </div>
+
+                <div class="form-group">
+                    <label for="plantType">Plant Type (Optional)</label>
+                    <input type="text" id="plantType" placeholder="e.g., Tomato, Apple, Corn">
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes (Optional)</label>
+                    <textarea id="notes" rows="3" placeholder="Any additional information about the plant or symptoms..."></textarea>
+                </div>
+
+                <button class="btn" id="analyzeBtn" disabled>Analyze Image</button>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="result-card" id="resultCard">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/api';
+        let selectedFile = null;
+
+        // DOM elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultSection = document.getElementById('resultSection');
+        const resultCard = document.getElementById('resultCard');
+        const apiStatus = document.getElementById('apiStatus');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+
+        // Check API status on load
+        checkApiStatus();
+
+        // Event listeners
+        uploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        analyzeBtn.addEventListener('click', analyzeImage);
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+
+        function checkApiStatus() {
+            fetch(`${API_BASE_URL}/health`)
+                .then(response => response.json())
+                .then(data => {
+                    statusIndicator.className = 'status-indicator status-online';
+                    statusText.textContent = 'API Online';
+                })
+                .catch(error => {
+                    statusIndicator.className = 'status-indicator status-offline';
+                    statusText.textContent = 'API Offline - Please start the server';
+                });
+        }
+
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                selectedFile = file;
+                analyzeBtn.disabled = false;
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadArea.innerHTML = `
+                        <img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 10px;">
+                        <div style="margin-top: 10px; color: #4CAF50;">✓ Image selected: ${file.name}</div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function analyzeImage() {
+            if (!selectedFile) return;
+
+            // Show loading state
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+            resultSection.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+            formData.append('plantType', document.getElementById('plantType').value);
+            formData.append('notes', document.getElementById('notes').value);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/diagnosis/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayResult(result.diagnosis);
+                } else {
+                    showError(result.error || 'Analysis failed');
+                }
+            } catch (error) {
+                showError('Failed to connect to the API. Please make sure the server is running.');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Analyze Image';
+            }
+        }
+
+        function displayResult(diagnosis) {
+            const confidence = (diagnosis.prediction.confidence * 100).toFixed(1);
+            const diseaseInfo = diagnosis.prediction.diseaseInfo;
+            
+            let statusClass = 'suspicious';
+            let statusIcon = '⚠️';
+            
+            if (diagnosis.prediction.disease.includes('healthy')) {
+                statusClass = 'healthy';
+                statusIcon = '✅';
+            } else if (diagnosis.prediction.confidence > 0.7) {
+                statusClass = 'diseased';
+                statusIcon = '🚨';
+            }
+
+            resultCard.innerHTML = `
+                <div class="result-header">
+                    <div class="result-icon ${statusClass}">${statusIcon}</div>
+                    <div>
+                        <h3>${diseaseInfo.name}</h3>
+                        <p>Confidence: ${confidence}%</p>
+                    </div>
+                </div>
+
+                <div class="confidence-bar">
+                    <div class="confidence-fill" style="width: ${confidence}%"></div>
+                </div>
+
+                <div class="disease-info">
+                    <h4>Description</h4>
+                    <p>${diseaseInfo.description}</p>
+                    
+                    <h4>Treatment</h4>
+                    <p>${diseaseInfo.treatment}</p>
+                    
+                    <h4>Severity</h4>
+                    <p>${diseaseInfo.severity}</p>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h4>Top Predictions</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        ${diagnosis.allPredictions.slice(0, 3).map(pred => `
+                            <li style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                                <strong>${pred.class.replace(/_/g, ' ')}</strong> - ${(pred.probability * 100).toFixed(1)}%
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            resultCard.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html> 
