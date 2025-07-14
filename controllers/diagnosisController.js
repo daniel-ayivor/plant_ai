@@ -1,4 +1,5 @@
 const aiModel = require('../services/aiModel');
+const Diagnosis = require('../models/Diagnosis');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -98,41 +99,11 @@ class DiagnosisController {
   async getDiagnosisHistory(req, res) {
     try {
       const userId = req.user.id;
-      
-      // Mock diagnosis history - in production, this would come from a database
-      const history = [
-        {
-          id: 1,
-          userId: userId,
-          imageUrl: '/uploads/sample1.jpg',
-          disease: 'early_blight',
-          confidence: 0.85,
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          recommendations: [
-            'Remove infected leaves and destroy them.',
-            'Apply fungicide containing chlorothalonil.',
-            'Avoid overhead watering.'
-          ]
-        },
-        {
-          id: 2,
-          userId: userId,
-          imageUrl: '/uploads/sample2.jpg',
-          disease: 'healthy',
-          confidence: 0.92,
-          timestamp: new Date(Date.now() - 172800000).toISOString(),
-          recommendations: [
-            'Your plant appears to be healthy!',
-            'Continue with regular watering and care.'
-          ]
-        }
-      ];
-
+      const history = await Diagnosis.find({ userId }).sort({ timestamp: -1 });
       res.json({
         success: true,
-        history: history
+        history
       });
-
     } catch (error) {
       console.error('Error in getDiagnosisHistory:', error);
       res.status(500).json({
@@ -148,47 +119,17 @@ class DiagnosisController {
     try {
       const { id } = req.params;
       const userId = req.user.id;
-
-      // Mock diagnosis details - in production, this would come from a database
-      const diagnosis = {
-        id: parseInt(id),
-        userId: userId,
-        imageUrl: '/uploads/sample1.jpg',
-        disease: 'early_blight',
-        confidence: 0.85,
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        predictions: [
-          { disease: 'early_blight', confidence: 0.85 },
-          { disease: 'late_blight', confidence: 0.08 },
-          { disease: 'healthy', confidence: 0.05 },
-          { disease: 'bacterial_spot', confidence: 0.02 }
-        ],
-        recommendations: [
-          'Remove infected leaves and destroy them.',
-          'Apply fungicide containing chlorothalonil.',
-          'Avoid overhead watering.',
-          'Space plants properly for better air circulation.'
-        ],
-        plantInfo: {
-          name: "Tomato Plant",
-          scientificName: "Solanum lycopersicum",
-          family: "Solanaceae",
-          description: "A popular vegetable plant grown for its edible fruits."
-        }
-      };
-
-      if (diagnosis.userId !== userId) {
-        return res.status(403).json({
+      const diagnosis = await Diagnosis.findOne({ _id: id, userId });
+      if (!diagnosis) {
+        return res.status(404).json({
           success: false,
-          message: 'Access denied'
+          message: 'Diagnosis not found'
         });
       }
-
       res.json({
         success: true,
-        diagnosis: diagnosis
+        diagnosis
       });
-
     } catch (error) {
       console.error('Error in getDiagnosisById:', error);
       res.status(500).json({
@@ -204,15 +145,17 @@ class DiagnosisController {
     try {
       const { id } = req.params;
       const userId = req.user.id;
-
-      // Mock deletion - in production, this would delete from database
-      console.log(`Deleting diagnosis ${id} for user ${userId}`);
-
+      const deleted = await Diagnosis.findOneAndDelete({ _id: id, userId });
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: 'Diagnosis not found'
+        });
+      }
       res.json({
         success: true,
         message: 'Diagnosis deleted successfully'
       });
-
     } catch (error) {
       console.error('Error in deleteDiagnosis:', error);
       res.status(500).json({
@@ -227,26 +170,31 @@ class DiagnosisController {
   async getDiagnosisStats(req, res) {
     try {
       const userId = req.user.id;
-
-      // Mock statistics - in production, this would come from a database
-      const stats = {
-        totalDiagnoses: 15,
-        healthyCount: 8,
-        diseasedCount: 7,
-        mostCommonDisease: 'early_blight',
-        averageConfidence: 0.87,
-        recentActivity: {
-          lastWeek: 3,
-          lastMonth: 12,
-          lastYear: 15
-        }
-      };
-
+      const totalDiagnoses = await Diagnosis.countDocuments({ userId });
+      const healthyCount = await Diagnosis.countDocuments({ userId, disease: 'healthy' });
+      const diseasedCount = totalDiagnoses - healthyCount;
+      const mostCommon = await Diagnosis.aggregate([
+        { $match: { userId } },
+        { $group: { _id: '$disease', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 1 }
+      ]);
+      const mostCommonDisease = mostCommon[0]?._id || null;
+      const avgConfidenceAgg = await Diagnosis.aggregate([
+        { $match: { userId } },
+        { $group: { _id: null, avg: { $avg: '$confidence' } } }
+      ]);
+      const averageConfidence = avgConfidenceAgg[0]?.avg || 0;
       res.json({
         success: true,
-        stats: stats
+        stats: {
+          totalDiagnoses,
+          healthyCount,
+          diseasedCount,
+          mostCommonDisease,
+          averageConfidence
+        }
       });
-
     } catch (error) {
       console.error('Error in getDiagnosisStats:', error);
       res.status(500).json({

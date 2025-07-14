@@ -5,38 +5,20 @@ class AuthController {
   // Register a new user
   async register(req, res) {
     try {
-      // Check for validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
       const { username, email, password } = req.body;
-
-      // Create new user
-      const user = await User.create({
-        username,
-        email,
-        password,
-        provider: 'local'
-      });
-
-      // Generate JWT token
-      const token = User.generateToken(user);
-
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        user,
-        token
-      });
-
+      if (!username || !email || !password) {
+        return res.status(400).json({ error: 'All fields are required' });
+      }
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ error: 'User already exists' });
+      }
+      const newUser = new User({ username, email, password });
+      await newUser.save();
+      res.status(201).json({ success: true, user: newUser });
     } catch (error) {
-      console.error('❌ Error in user registration:', error);
-      res.status(500).json({ 
-        error: 'Failed to register user',
-        message: error.message 
-      });
+      console.error('❌ Error registering user:', error);
+      res.status(500).json({ error: 'Failed to register user', message: error.message });
     }
   }
 

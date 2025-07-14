@@ -36,21 +36,26 @@ class CommunityController {
   async getAllPosts(req, res) {
     try {
       const { category, sortBy = 'createdAt', order = 'desc', limit = 20 } = req.query;
+      const filter = {};
+      if (category) filter.category = category;
 
-      const filters = { category, sortBy, order, limit };
-      const posts = CommunityPost.getAll(filters);
+      const sort = {};
+      sort[sortBy] = order === 'desc' ? -1 : 1;
+
+      const posts = await CommunityPost.find(filter)
+        .sort(sort)
+        .limit(parseInt(limit));
 
       res.status(200).json({
         success: true,
         posts,
         total: posts.length
       });
-
     } catch (error) {
       console.error('❌ Error fetching community posts:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to fetch community posts',
-        message: error.message 
+        message: error.message
       });
     }
   }
