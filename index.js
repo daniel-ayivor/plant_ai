@@ -25,7 +25,10 @@ const PORT = process.env.PORT || 3003;
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: 'https://preview--leaf-whisper-garden-aid.lovable.app',
+  credentials: true
+}));
 
 // Passport middleware
 app.use(passport.initialize());
