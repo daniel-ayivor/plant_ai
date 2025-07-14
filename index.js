@@ -17,6 +17,8 @@ const { passport } = require('./config/passport');
 
 // Import middleware
 const { authenticateToken, optionalAuth } = require('./middleware/auth');
+const connectDB = require('./config/db');
+connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 3003;
