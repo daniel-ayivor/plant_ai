@@ -17,7 +17,7 @@ class AuthController {
       await newUser.save();
       res.status(201).json({ success: true, user: newUser });
     } catch (error) {
-      console.error('❌ Error registering user:', error);
+      console.error('Error registering user:', error);
       res.status(500).json({ error: 'Failed to register user', message: error.message });
     }
   }
@@ -34,7 +34,7 @@ class AuthController {
       const { email, password } = req.body;
 
       // Find user by email
-      const user = User.findByEmail(email);
+      const user = await User.findOne({ email });
       if (!user) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
