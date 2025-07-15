@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 class AuthController {
   // Register a new user
@@ -48,7 +49,11 @@ class AuthController {
       }
 
       // Generate JWT token
-      const token = User.generateToken(user);
+      const token = jwt.sign(
+        { userId: user._id, email: user.email },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '24h' }
+      );
 
       res.status(200).json({
         success: true,
