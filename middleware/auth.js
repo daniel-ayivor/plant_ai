@@ -20,7 +20,7 @@ const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
 
-    req.user = decoded;
+    req.user = { ...decoded, id: decoded.userId };
     next();
   } catch (error) {
     return res.status(403).json({ error: 'Invalid or expired token' });
@@ -37,7 +37,7 @@ const optionalAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
       const user = await User.findById(decoded.userId);
       if (user) {
-        req.user = decoded;
+        req.user = { ...decoded, id: decoded.userId };
       }
     }
     next();
@@ -68,7 +68,7 @@ const authenticateAdmin = async (req, res, next) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    req.user = decoded;
+    req.user = { ...decoded, id: decoded.userId };
     next();
   } catch (error) {
     return res.status(403).json({ error: 'Invalid or expired token' });
