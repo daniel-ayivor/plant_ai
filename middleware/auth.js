@@ -1,7 +1,8 @@
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 // Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -10,11 +11,11 @@ const authenticateToken = (req, res, next) => {
       return res.status(401).json({ error: 'Access token required' });
     }
 
-    // Verify token
-    const decoded = User.verifyToken(token);
-    
-    // Get user from database
-    const user = User.findById(decoded.userId);
+    // Verify token using jsonwebtoken
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
+    // Optionally, fetch user from DB if you need user info
+    const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
@@ -27,14 +28,14 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Optional authentication middleware
-const optionalAuth = (req, res, next) => {
+const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token) {
-      const decoded = User.verifyToken(token);
-      const user = User.findById(decoded.userId);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+      const user = await User.findById(decoded.userId);
       if (user) {
         req.user = decoded;
       }
@@ -47,7 +48,7 @@ const optionalAuth = (req, res, next) => {
 };
 
 // Admin authentication middleware
-const authenticateAdmin = (req, res, next) => {
+const authenticateAdmin = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -56,16 +57,13 @@ const authenticateAdmin = (req, res, next) => {
       return res.status(401).json({ error: 'Access token required' });
     }
 
-    // Verify token
-    const decoded = User.verifyToken(token);
-    
-    // Get user from database
-    const user = User.findById(decoded.userId);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
 
-    // Check if user is admin
+    // Check if user is admin (assumes a 'role' field)
     if (user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
