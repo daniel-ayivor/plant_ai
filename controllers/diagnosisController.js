@@ -95,6 +95,43 @@ class DiagnosisController {
     }
   }
 
+  // Create and save a diagnosis entry
+  async createDiagnosis(req, res) {
+    try {
+      const userId = req.user.id;
+      const {
+        disease,
+        confidence,
+        recommendations,
+        predictions,
+        plantInfo,
+        notes,
+        imageUrl,
+        timestamp
+      } = req.body;
+      const diagnosis = new Diagnosis({
+        userId,
+        disease,
+        confidence,
+        recommendations,
+        predictions,
+        plantInfo,
+        notes,
+        imageUrl,
+        timestamp: timestamp || Date.now()
+      });
+      await diagnosis.save();
+      res.json({ success: true, diagnosis });
+    } catch (error) {
+      console.error('Error in createDiagnosis:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error saving diagnosis',
+        error: error.message
+      });
+    }
+  }
+
   // Get diagnosis history for a user
   async getDiagnosisHistory(req, res) {
     try {

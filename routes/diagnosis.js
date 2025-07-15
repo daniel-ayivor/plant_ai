@@ -6,6 +6,9 @@ const { authenticateToken } = require('../middleware/auth');
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
 
+// Save a diagnosis entry
+router.post('/', DiagnosisController.createDiagnosis.bind(DiagnosisController));
+
 // Upload and analyze plant image (diagnosis)
 router.post('/upload', upload.single('image'), DiagnosisController.analyzePlantImage);
 
