@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
 
 class AuthController {
   // Register a new user
@@ -13,7 +14,8 @@ class AuthController {
       if (existingUser) {
         return res.status(400).json({ error: 'User already exists' });
       }
-      const newUser = new User({ username, email, password });
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({ username, email, password: hashedPassword });
       await newUser.save();
       res.status(201).json({ success: true, user: newUser });
     } catch (error) {
@@ -40,8 +42,8 @@ class AuthController {
       }
 
       // Verify password
-      const isValidPassword = await User.verifyPassword(user, password);
-      if (!isValidPassword) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
