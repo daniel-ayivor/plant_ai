@@ -98,7 +98,8 @@ class DiagnosisController {
   // Create and save a diagnosis entry
   async createDiagnosis(req, res) {
     try {
-      const userId = req.user.id;
+      // Remove userId requirement for anonymous saves
+      const userId = req.user ? req.user.id : undefined;
       const {
         disease,
         confidence,
@@ -109,8 +110,7 @@ class DiagnosisController {
         imageUrl,
         timestamp
       } = req.body;
-      const diagnosis = new Diagnosis({
-        userId,
+      const diagnosisData = {
         disease,
         confidence,
         recommendations,
@@ -119,7 +119,9 @@ class DiagnosisController {
         notes,
         imageUrl,
         timestamp: timestamp || Date.now()
-      });
+      };
+      if (userId) diagnosisData.userId = userId;
+      const diagnosis = new Diagnosis(diagnosisData);
       await diagnosis.save();
       res.json({ success: true, diagnosis });
     } catch (error) {
